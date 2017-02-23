@@ -1382,7 +1382,7 @@ def getReply(devices, type, STdeviceName, op, num, param){
                 def temp = roundValue(STdevice.currentValue(type))
                 result = "The temperature of the ${STdeviceName} is ${temp} degrees"
                 if (otherStatus) {
-                    def humidity = STdevice.currentValue("humidity"), wet=STdevice.currentValue("water")
+                    def humidity = STdevice.currentValue("humidity"), wet=STdevice.currentValue("water")?:"dry"
                     result += humidity ? ", and the relative humidity is ${humidity}%. " : ". "
                     result += wet ? "Also, this device is a leak sensor, and it is currently ${wet}. " : ""
                 }
@@ -1397,7 +1397,7 @@ def getReply(devices, type, STdeviceName, op, num, param){
                 result = "The relative humidity at the ${STdeviceName} is ${STdevice.currentValue(type)}%"
                 if (otherStatus) {
                     def temp =roundValue(STdevice.currentValue("temperature"))
-                    result += temp ? ", and the temperature is ${temp} degrees." : ". "
+                    result += temp ? ", and the temperature is ${temp} degrees. " : ". "
 				}
                 else result += ". "
             }
@@ -1450,7 +1450,7 @@ def getReply(devices, type, STdeviceName, op, num, param){
                 result += onOffStatus =="stopped" ? ". " : onOffStatus=="playing" && track ? ": '${track}'" : ""
                 result += onOffStatus == "playing" && level && mute =="unmuted" ? ", and it's volume is set to ${level}%. " : mute =="muted" ? ", and it's currently muted. " :""
             }
-            else if (type == "water") result = "The water sensor, '${STdeviceName}', is currently ${STdevice.currentValue(type)}. "
+            else if (type == "water") result = "The water sensor, '${STdeviceName}', is currently ${STdevice.currentValue(type)?:'dry'}. "
             else if (type == "shade") result = "The window shade, '${STdeviceName}', is currently " + STdevice.currentValue('windowShade') +". "
             else result = "The ${STdeviceName} is currently ${STdevice.currentValue(type)}. "
         }
@@ -2267,8 +2267,8 @@ def batteryReport(){
 }
 def waterReport(){
     String result = ""
-    def wetList = voiceWater.findAll{it.latestValue("water") != "dry"}
-	if (!voiceWetOnly) for (deviceName in voiceWater) { result += "The ${deviceName} is ${deviceName.latestValue("water")}. " }
+    def wetList = voiceWater.findAll{it.latestValue("water")?:"dry" != "dry"}
+	if (!voiceWetOnly) for (deviceName in voiceWater) { result += "The ${deviceName} is ${deviceName.latestValue("water")?:'dry'}. " }
 	else if (wetList) for (deviceName in wetList){ result += "The ${deviceName} is sensing water is present. " }
     return result
 }
