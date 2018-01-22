@@ -58,7 +58,7 @@ metadata {
             }
 		}
         valueTile("carbonDioxide", "device.carbonDioxide", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
-        	state "carbonDioxide", label:'${currentValue} CO₂ ppm', unit:"ppm",backgroundColors:[
+        	state "carbonDioxide", label:'${currentValue}\nCO₂ ppm', unit:"ppm",backgroundColors:[
                     [value: 0, color: "#90d2a7"],
                     [value: 625, color: "#44b621"],
                     [value: 1300, color: "#f1d801"],
@@ -66,7 +66,7 @@ metadata {
                 ]
         }
         valueTile("voc", "device.voc", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
-            state "voc", label:'${currentValue} VOC ppb', unit:"ppb",backgroundColors:[
+            state "voc", label:'${currentValue}\nVOC ppb', unit:"ppb",backgroundColors:[
                     [value: 0, color: "#90d2a7"],
                     [value: 150, color: "#44b621"],
                     [value: 300, color: "#f1d801"],
@@ -74,7 +74,7 @@ metadata {
                 ]
         }
         valueTile("particle", "device.particle", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
-            state "particle", label:'${currentValue} µg/m³', unit:"µg/m³ PM2.5",backgroundColors:[
+            state "particle", label:'${currentValue}\nµg/m³', unit:"µg/m³ PM2.5",backgroundColors:[
                      [value: 0, color: "#90d2a7"],
                     [value: 12, color: "#44b621"],
                     [value: 25, color: "#f1d801"],
@@ -101,9 +101,17 @@ metadata {
 							[value: 96, color: "#bc2323"]
 					]
 		}
-        valueTile("humidity", "device.humidity", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
-            state "humidity", label:'${currentValue}% humidty', unit:"%"
-        }
+        //valueTile("humidity", "device.humidity", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
+        //    state "humidity", label:'${currentValue}%\nhumidity', unit:"%"
+        //}
+        
+        valueTile("humidity", "device.humidity", width: 2, height: 2, inactiveLabel: false, canChangeIcon: false, canChangeBackground: false) {
+			state "humidity", label:'${currentValue}%', unit:"%",
+            	backgroundColors:[
+					[value:  0, color: "#0033cc"],
+                    [value: 100, color: "#ff66ff"]
+				]
+		}
         standardTile("refresh", "device.refresh", inactiveLabel: false, width: 2, height: 2, decoration: "flat") {
             state "refresh", action:"refresh.refresh", icon:"st.secondary.refresh"
         }
@@ -119,7 +127,7 @@ metadata {
 	}
 }
 private getAPIKey() {
-    return "ENTER YOUR API KEY HERE (KEEP THE QUOTATION MARKS)"
+    return "eyJhbGciOiJIUzI1NiJ9.eyJncmFudGVlIjoiYmFycnlAY2hlemJ1cmtlLmNvbSIsImlhdCI6MTUxNjM5NDIxMiwidmFsaWRpdHkiOi0xLCJqdGkiOiJlOTJhMDRiNS0yYjRlLTQ3OTctOWM2Yy04ZDZmM2YwNDhkN2EiLCJwZXJtaXNzaW9ucyI6WyJ1c2VyOnJlYWQiLCJkZXZpY2U6cmVhZCJdLCJxdW90YSI6MjAwLCJyYXRlTGltaXQiOjV9.Gl3ciz2d3NAFuojD8LogG0lviRLrT_p0o-utvtadIA4"
 }
 def parse(String description) {
 	log.debug "Parsing '${description}'"
@@ -151,28 +159,35 @@ def poll() {
                 if (resp.status==200){
                     // get the data from the response body
                     log.debug "response data: ${resp.data}"
-                    log.debug "Particle: ${resp.data.datapoints[-1][1]}"
-                    sendEvent(name: "particle", value: sprintf("%.2f",resp.data.datapoints[-1][1]), unit: "µg/m³ PM2.5", isStateChange: true)
-                    BigDecimal tmp = resp.data.datapoints[-1][2]
-                    def tmpround = String.format("%5.2f",tmp)
-                    def temp = tmpround
-                    if (CF == "°F") temp = celsiusToFahrenheit(tmp) as Integer
-                    sendEvent(name: "temperature", value: temp, unit: "°", isStateChange: true)
-                    log.debug "Temperature: ${resp.data.datapoints[-1][2]}"
-                    log.debug "Humidity: ${temp}${CF}"
-                    sendEvent(name: "humidity", value: resp.data.datapoints[-1][3] as Integer, unit: "%", isStateChange: true)
+                    
+                    def parts = resp.data.datapoints[-1][1].toDouble().round(2)
+                    log.debug "Particle: ${parts}"
+                    sendEvent(name: "particle", value: sprintf("%.2f",parts), unit: "µg/m³ PM2.5", isStateChange: true)
+                     
+                    def tmp = resp.data.datapoints[-1][2].toDouble()
+                    def temp = ((CF == "°F") ? celsiusToFahrenheit(tmp) : tmp ).toDouble().round(1)
+                    log.debug "Temperature: ${temp}${CF}"
+                    sendEvent(name: "temperature", value: temp as Double, unit: "°", isStateChange: true)
+                    
+                    def hum = resp.data.datapoints[-1][3].toDouble().round(0)
+                    log.debug "Humidity: ${hum}%"
+                    sendEvent(name: "humidity", value: hum, unit: "%", isStateChange: true)
+                    
                     log.debug "Carbon dioxide: ${resp.data.datapoints[-1][4]}"
                     sendEvent(name: "carbonDioxide", value: resp.data.datapoints[-1][4] as Integer, unit: "ppm", isStateChange: true)
+                    
                     log.debug "Volatile Organic Compounds: ${resp.data.datapoints[-1][5]}"
                     sendEvent(name: "voc", value: resp.data.datapoints[-1][5] as Integer, unit: "ppb", isStateChange: true)
-                    log.debug "Pollution: ${resp.data.datapoints[-1][6]}"
-                    def allpollu = resp.data.datapoints[-1][6]
-                    sendEvent(name: "pollution", value: resp.data.datapoints[-1][6] as Integer, unit: "GPI", isStateChange: true)
+                    
+                    def allpollu = resp.data.datapoints[-1][6].toDouble().round(0)
+                    log.debug "Pollution: ${allpollu}"
+                    sendEvent(name: "pollution", value: allpollu, unit: "GPI", isStateChange: true)
+                    
                     def GPItext 
-                    if (allpollu < 25) GPItext="Great"
-                    else if (allpollu < 50) GPItext="Good"
-                    else if (allpollu < 75) GPItext="Fair"
-                    else if (allpollu > 75) GPItext="Poor"
+                    if (allpollu < 25) GPItext="GREAT"
+                    else if (allpollu < 50) GPItext="GOOD"
+                    else if (allpollu < 75) GPItext="FAIR"
+                    else if (allpollu > 75) GPItext="POOR"
                     sendEvent(name: "GPIstate", value: GPItext, isStateChange: true)
                     def now = new Date().format("EEE, d MMM yyyy HH:mm:ss",location.timeZone)
                     sendEvent(name:"lastUpdated", value: now, displayed: false, isStateChange: true)
