@@ -118,8 +118,14 @@ def updated() {
     initialize()
 }
 def initialize() { 
+	subscribe(location, "askAlexaMQ.poll", pollHandler)
 	sendLocationEvent(name: "askAlexaMQ", value: "refresh", data: [queues: parent.getMQListID(false)] , isStateChange: true, descriptionText: "Ask Alexa message queue list refresh")
 }
+//poll handler
+def pollHandler(evt)	{
+	sendLocationEvent(name: "askAlexaMQ", value: "refresh", data: [queues: parent.getMQListID(false)] , isStateChange: true, descriptionText: "Ask Alexa message queue list refresh")
+}
+//
 //Main Handlers
 def msgHandler(date, descriptionText, unit, value, overwrite, expires, notifyOnly, suppressTimeDate, trackDelete) {
     def msgTxt
